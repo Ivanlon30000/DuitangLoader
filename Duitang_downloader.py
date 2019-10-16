@@ -13,7 +13,7 @@ from urllib.parse import quote
 
 
 class DuitangDownloader():
-    def __init__(self, label, save_path, max_amount, max_workers=8, batch_size=50, log_out=False):
+    def __init__(self, label, save_path, max_amount, max_workers=8, batch_size=50, log_out=False, resume=0):
         """
         :param label: 批量下载的标签
         :param save_path: 保存图片的路径
@@ -27,8 +27,8 @@ class DuitangDownloader():
         self.log_out = log_out
 
         self.file_lock = Lock()
-        self.count = 1
-        self.ptr = 0
+        self.count = 0
+        self.ptr = resume
 
         # 创建文件夹
         if not os.path.exists(save_path):
@@ -75,7 +75,7 @@ class DuitangDownloader():
                 obj['photo']['path']
             ) for obj in objs]  # 数据结构: list[(相关信息, 图片路径)*N]
 
-            self.count = self.count + len(info)
+            # self.count = self.count + len(info)
             self.ptr = self.ptr + self.batch_size
             yield info
         else:
@@ -103,7 +103,8 @@ class DuitangDownloader():
                 # 命名文件
                 file_name = DuitangDownloader.normalize_file_name(file_name) + img_url[img_url.rindex('.'):]
                 # 创建线程
-                t = pool.submit(self.__down_pic, img_url, file_name)
+                self.count = self.count + 1
+                t = pool.submit(self.__down_pic, img_url, file_name, self.count)
                 ts.append(t)
 
     def run(self):
@@ -135,6 +136,7 @@ if __name__ == '__main__':
     amount = 500
     max_workers = 8
     batch_size = 50
+    resume = 0
     for opt, arg in opts:
         if opt == '-h':
             help = """
@@ -145,6 +147,7 @@ if __name__ == '__main__':
     -l --log_out: 不打印 log, 默认打印
     -t --max_workers: 线程数, 缺省值 8
     -b --batch_size: 每次循环下载的图片数量, 缺省值 50 
+    -r --resume: 从某个图片指针开始, 缺省值 0 
     -h --help: 帮助信息"""
             print(help)
             sys.exit()
@@ -153,13 +156,16 @@ if __name__ == '__main__':
         elif opt in ('-o', '--out_put'):
             out_path = arg
         elif opt in ('-a', '--max_amout'):
-            amount = arg
+            amount = int(arg)
         elif opt in ('-l', '--log_out'):
             log = False
         elif opt in ('-t', '--max_workers'):
-            max_workers = arg
+            max_workers = int(arg)
         elif opt in ('-b', '--batch_size'):
-            batch_size = 50
+            batch_size = int(arg)
+        elif opt in ('-r', '--resume'):
+            resume = int(arg)
+
     if label is None or out_path is None:
         print("语法错误:\n"
               "\tpython Duitang_downloader -s <关键词> -o <输出路径> [-a <最大图片数>] [-l]\n"
@@ -170,6 +176,8 @@ if __name__ == '__main__':
                           max_amount=amount,
                           max_workers=max_workers,
                           log_out=log,
-                          batch_size=batch_size
+                          batch_size=batch_size,
+                          resume=resume
                           )
-    c.run()
+    ptr = c.run()
+    print('**\t图片指针: {}'.format(ptr))
