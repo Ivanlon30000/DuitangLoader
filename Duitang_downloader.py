@@ -13,7 +13,7 @@ from urllib.parse import quote
 
 
 class DuitangDownloader():
-    def __init__(self, label, save_path, max_amount, max_workers=8, batch_size=50, log_out=False, resume=0):
+    def __init__(self, label, save_path, max_amount=500, max_workers=8, batch_size=50, log_out=False, resume=0):
         """
         :param label: 批量下载的标签
         :param save_path: 保存图片的路径
@@ -114,6 +114,7 @@ class DuitangDownloader():
         """
         self.__loop()
         wait(self.ts)
+        return self.ptr
 
 if __name__ == '__main__':
     import sys
@@ -122,7 +123,7 @@ if __name__ == '__main__':
     try:
         opts, args = getopt.getopt(
             sys.argv[1:],
-            'hs:o:a:lt:b:', ['help', 'search', 'out_path', 'max_amout', 'log_out', 'max_workers', 'batch_size']
+            'hs:o:a:lt:b:r:', ['help', 'search', 'out_path', 'max_amout', 'log_out', 'max_workers', 'batch_size', 'resume']
         )
     except getopt.GetoptError:
         print("语法错误:\n"
@@ -140,7 +141,7 @@ if __name__ == '__main__':
     for opt, arg in opts:
         if opt == '-h':
             help = """
-用法 python python Duitang_downloader -s <关键词> -o <输出路径> [-a <最大图片数>] [-l]
+用法 python Duitang_downloader -s <关键词> -o <输出路径> [-a <最大图片数>] [-r <从某个位置开始>] [-l]
     -s --search: 关键词
     -o --out_path: 输出路径
     -a --max_amount: 张数限制, 缺省值 500
