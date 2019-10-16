@@ -13,7 +13,7 @@ from urllib.parse import quote
 
 
 class DuitangDownloader():
-    def __init__(self, label, save_path, max_amount, max_workers=8, epoch=50, log_out=False):
+    def __init__(self, label, save_path, max_amount, max_workers=8, batch_size=50, log_out=False):
         """
         :param label: 批量下载的标签
         :param save_path: 保存图片的路径
@@ -23,7 +23,7 @@ class DuitangDownloader():
         self.save_path = save_path
         self.max_amount = max_amount
         self.max_workers = max_workers
-        self.epoch = epoch
+        self.batch_size = batch_size
         self.log_out = log_out
 
         self.file_lock = Lock()
@@ -65,7 +65,7 @@ class DuitangDownloader():
         url = 'https://www.duitang.com/napi/blog/list/by_search/?kw={}&start={}&limit={}'
         while self.count < self.max_amount:
             # get 请求, 返回一个 json 字符串, 包含了图片的地址
-            res = get(url.format(label, self.ptr, self.epoch))
+            res = get(url.format(label, self.ptr, self.batch_size))
             # json 转 dict
             data_dict = loads(res.text)
             # 处理 dict, 提取有用信息
@@ -76,7 +76,7 @@ class DuitangDownloader():
             ) for obj in objs]  # 数据结构: list[(相关信息, 图片路径)*N]
 
             self.count = self.count + len(info)
-            self.ptr = self.ptr + self.epoch
+            self.ptr = self.ptr + self.batch_size
             yield info
         else:
             return
@@ -115,5 +115,61 @@ class DuitangDownloader():
         wait(self.ts)
 
 if __name__ == '__main__':
-    c = DuitangDownloader('四宫辉夜', 'D:\\workdir\\kaguya-sama_tmp', 250, log_out=True)
+    import sys
+    import getopt
+
+    try:
+        opts, args = getopt.getopt(
+            sys.argv[1:],
+            'hs:o:a:lt:b:', ['help', 'search', 'out_path', 'max_amout', 'log_out', 'max_workers', 'batch_size']
+        )
+    except getopt.GetoptError:
+        print("语法错误:\n"
+              "\tpython Duitang_downloader -s <关键词> -o <输出路径> [-a <最大图片数>] [-l]\n"
+              "\t输入 python Duitang_downloader -h 获取帮助")
+        sys.exit(2)
+
+    label = None
+    out_path = None
+    log = True
+    amount = 500
+    max_workers = 8
+    batch_size = 50
+    for opt, arg in opts:
+        if opt == '-h':
+            help = """
+用法 python python Duitang_downloader -s <关键词> -o <输出路径> [-a <最大图片数>] [-l]
+    -s --search: 关键词
+    -o --out_path: 输出路径
+    -a --max_amount: 张数限制, 缺省值 500
+    -l --log_out: 不打印 log, 默认打印
+    -t --max_workers: 线程数, 缺省值 8
+    -b --batch_size: 每次循环下载的图片数量, 缺省值 50 
+    -h --help: 帮助信息"""
+            print(help)
+            sys.exit()
+        elif opt in ('-s', '--search'):
+            label = arg
+        elif opt in ('-o', '--out_put'):
+            out_path = arg
+        elif opt in ('-a', '--max_amout'):
+            amount = arg
+        elif opt in ('-l', '--log_out'):
+            log = False
+        elif opt in ('-t', '--max_workers'):
+            max_workers = arg
+        elif opt in ('-b', '--batch_size'):
+            batch_size = 50
+    if label is None or out_path is None:
+        print("语法错误:\n"
+              "\tpython Duitang_downloader -s <关键词> -o <输出路径> [-a <最大图片数>] [-l]\n"
+              "\t输入 python Duitang_downloader -h 获取帮助")
+        sys.exit(2)
+
+    c = DuitangDownloader(label, out_path,
+                          max_amount=amount,
+                          max_workers=max_workers,
+                          log_out=log,
+                          batch_size=batch_size
+                          )
     c.run()
