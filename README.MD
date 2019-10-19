@@ -1,7 +1,7 @@
 # 堆糖图片批量下载 Duitang downloader
 ## 使用方法
 ### 控制台:  
-`python Duitang_downloader -s <关键词> -o <输出路径> [-a <最大图片数>] [-r <从某个位置开始>] [-l]`
+`python DuitangLoader -s <关键词> -o <输出路径> [-a <最大图片数>] [-r <从某个位置开始>] [-l]`
   
 参数解释:
 ```
@@ -17,7 +17,7 @@
   
 ### 函数调用
 ```python
-from Duitang_downloader import DuitangDownloader
+from DuitangLoader import DuitangDownloader
 
 # 以下列出的是缺省值
 label = ...         # 标签/关键词

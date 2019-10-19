@@ -63,7 +63,7 @@ class DuitangDownloader():
         """
         label = quote(self.label)
         url = 'https://www.duitang.com/napi/blog/list/by_search/?kw={}&start={}&limit={}'
-        while self.count < self.max_amount:
+        while True:
             # get 请求, 返回一个 json 字符串, 包含了图片的地址
             res = get(url.format(label, self.ptr, self.batch_size))
             # json 转 dict
@@ -74,12 +74,8 @@ class DuitangDownloader():
                 '{}_{}_{}'.format(obj['msg'], obj['id'], obj['add_datetime_pretty']),
                 obj['photo']['path']
             ) for obj in objs]  # 数据结构: list[(相关信息, 图片路径)*N]
-
-            # self.count = self.count + len(info)
-            self.ptr = self.ptr + self.batch_size
+            # self.ptr = self.ptr + self.batch_size
             yield info
-        else:
-            return
 
     @staticmethod
     def normalize_file_name(file_name):
@@ -97,15 +93,25 @@ class DuitangDownloader():
         """
         ts = self.ts
         pool = self.pool
-        for info_list in self.gen_urls_by_label():
-            for info in info_list:
-                file_name, img_url = info
-                # 命名文件
-                file_name = DuitangDownloader.normalize_file_name(file_name) + img_url[img_url.rindex('.'):]
-                # 创建线程
-                self.count = self.count + 1
-                t = pool.submit(self.__down_pic, img_url, file_name, self.count)
-                ts.append(t)
+        gener = self.gen_urls_by_label()
+        while gener is not None:
+            info_list = gener.send(None)
+            # 非空判断
+            if info_list:
+                for info in info_list:
+                    file_name, img_url = info
+                    # 命名文件
+                    file_name = DuitangDownloader.normalize_file_name(file_name) + img_url[img_url.rindex('.'):]
+                    # 创建线程
+                    t = pool.submit(self.__down_pic, img_url, file_name, self.count)
+                    ts.append(t)
+                    self.count = self.count + 1
+                    if self.count >= self.max_amount:
+                        gener = None
+                        break
+            else:
+                print('**\t没有关于 "{}" 的搜索结果, 请检查关键词是否有误.'.format(self.label))
+                break
 
     def run(self):
         """
@@ -114,6 +120,7 @@ class DuitangDownloader():
         """
         self.__loop()
         wait(self.ts)
+        self.ptr = self.ptr + self.count
         return self.ptr
 
 if __name__ == '__main__':
@@ -127,8 +134,8 @@ if __name__ == '__main__':
         )
     except getopt.GetoptError:
         print("语法错误:\n"
-              "\tpython Duitang_downloader -s <关键词> -o <输出路径> [-a <最大图片数>] [-l]\n"
-              "\t输入 python Duitang_downloader -h 获取帮助")
+              "\tpython DuitangLoader -s <关键词> -o <输出路径> [-a <最大图片数>] [-l]\n"
+              "\t输入 python DuitangLoader -h 获取帮助")
         sys.exit(2)
 
     label = None
@@ -139,9 +146,9 @@ if __name__ == '__main__':
     batch_size = 50
     resume = 0
     for opt, arg in opts:
-        if opt == '-h':
+        if opt in ('-h', '--help'):
             help = """
-用法 python Duitang_downloader -s <关键词> -o <输出路径> [-a <最大图片数>] [-r <从某个位置开始>] [-l]
+用法 python DuitangLoader -s <关键词> -o <输出路径> [-a <最大图片数>] [-r <从某个位置开始>] [-l]
     -s --search: 关键词
     -o --out_path: 输出路径
     -a --max_amount: 张数限制, 缺省值 500
@@ -154,23 +161,33 @@ if __name__ == '__main__':
             sys.exit()
         elif opt in ('-s', '--search'):
             label = arg
+            if not label:
+                print('ERROR\t关键词输入有误')
         elif opt in ('-o', '--out_put'):
             out_path = arg
         elif opt in ('-a', '--max_amout'):
             amount = int(arg)
+            if amount <= 0:
+                print('ERROR\t张数限制必须大于 0')
         elif opt in ('-l', '--log_out'):
             log = False
         elif opt in ('-t', '--max_workers'):
             max_workers = int(arg)
+            if max_workers <= 0:
+                print('ERROR\t线程数必须大于 0')
         elif opt in ('-b', '--batch_size'):
             batch_size = int(arg)
+            if batch_size <= 0:
+                print('ERROR\tbatch_size 必须大于 0')
         elif opt in ('-r', '--resume'):
             resume = int(arg)
+            if resume <= 0:
+                print('ERROR\tresume 必须大于 0')
 
     if label is None or out_path is None:
         print("语法错误:\n"
-              "\tpython Duitang_downloader -s <关键词> -o <输出路径> [-a <最大图片数>] [-l]\n"
-              "\t输入 python Duitang_downloader -h 获取帮助")
+              "\tpython DuitangLoader -s <关键词> -o <输出路径> [-a <最大图片数>] [-l]\n"
+              "\t输入 python DuitangLoader -h 获取帮助")
         sys.exit(2)
 
     c = DuitangDownloader(label, out_path,
