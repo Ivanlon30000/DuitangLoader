@@ -41,4 +41,4 @@ print(ptr)          # 保存 ptr
 > 其实只是想用来爬辉夜大小姐的图片的  
 > 我永远喜欢辉夜大小姐.jpg  
 
-![avatar](kaguya-sama/kaguya-sama.jpeg)
+![avatar](pics/kaguya-sama.jpeg)
