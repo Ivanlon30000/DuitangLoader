@@ -1,4 +1,4 @@
-# 堆糖图片批量下载 Duitang downloader
+# 堆糖图片批量下载 DuitangLoader
 ## 使用方法
 ### 控制台:  
 `python DuitangLoader -s <关键词> -o <输出路径> [-a <最大图片数>] [-r <从某个位置开始>] [-l]`
