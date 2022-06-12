@@ -42,3 +42,6 @@ print(ptr)          # 保存 ptr
 > 我永远喜欢辉夜大小姐.jpg  
 
 ![avatar](pics/kaguya-sama.jpeg)
+
+## LICENCE
+[WTFPL](https://github.com/Ivanlon30000/DuitangLoader/blob/master/LICENSE)
